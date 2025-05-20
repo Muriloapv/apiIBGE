@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Evolução do Nome</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <h1>Evolução do Ranking de um Nome</h1>
+  <form id="form">
+    <input type="text" id="nome" placeholder="Digite um nome" required>
+    <button type="submit">Buscar</button>
+  </form>
+  <canvas id="grafico"></canvas>
+
+  <script>
+    document.getElementById("form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const nome = document.getElementById("nome").value;
+
+      const res = await fetch("/nome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome })
+      });
+
+      const data = await res.json();
+
+      const labels = data.res.map(r => r.periodo);
+    //   const valores = data.res.map(r => r.ranking || 0); // não tem ranking direto, você pode calcular baseado na posição do nome
+      const valores = data.res.map(r => r.frequencia);
+ 
+
+      new Chart(document.getElementById("grafico"), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `Ranking do nome ${data.nome}`,
+            data: valores,
+            borderColor: 'blue',
+            fill: false
+          }]
+        }
+      });
+    });
+  </script>
+</body>
+</html>
