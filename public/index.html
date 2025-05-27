@@ -3,48 +3,536 @@
 <head>
   <meta charset="UTF-8">
   <title>Evolução do Nome</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <link rel="stylesheet" href="/style.css">
+  <style>
+    body {
+      font-family: 'Open Sans', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .chart-container {
+      position: relative;
+      height: 400px;
+      margin: 20px 0;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .chart-container-comparativo {
+      position: relative;
+      height: 400px;
+      margin: 20px 0;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    form {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    input, select, button {
+      padding: 8px 12px;
+      margin: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Evolução do Ranking de um Nome</h1>
+  <h1>Evolução da Frequência de um Nome</h1>
   <form id="form">
     <input type="text" id="nome" placeholder="Digite um nome" required>
+    Período de: <input type="number" id="periodoInicio" placeholder="Ano Início" min="1930" max="2020" required>
+    até: <input type="number" id="periodoFim" placeholder="Ano Fim" min="1930" max="2020" required>
     <button type="submit">Buscar</button>
   </form>
+  <div class="chart-container">
   <canvas id="grafico"></canvas>
+  </div>
+
+  <h1>Evolução do Ranking de Nomes por Localidade</h1>
+  <form id="formLocalidade">
+    <select id="tipoLocalidade" required>
+      <option value="">Selecione o tipo</option>
+      <option value="UF">UF</option>
+      <option value="municipio">Município</option>
+    </select>
+    <select id="estado" required>
+      <option value="">Selecione o Estado</option>
+    </select>
+    <select id="municipio" style="display: none;">
+      <option value="">Selecione o Município</option>
+    </select>
+    <button type="submit">Buscar</button>
+  </form>
+  <div class="table-container">
+    <table id="tabelaRanking">
+      <thead>
+        <tr>
+          <th>1º Lugar</th>
+          <th>2º Lugar</th>
+          <th>3º Lugar</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <h1>Comparativo de Frequência de Nomes por Localidade e Período</h1>
+  <form id="formComparativo">
+    <select id="tipoLocalidadeComparativo" required>
+      <option value="">Selecione o tipo</option>
+      <option value="UF">UF</option>
+      <option value="municipio">Município</option>
+    </select>
+    <select id="estadoComparativo" required>
+      <option value="">Selecione o Estado</option>
+    </select>
+    <select id="municipioComparativo" style="display: none;">
+      <option value="">Selecione o Município</option>
+    </select>
+    <input type="text" id="nome1Comparativo" placeholder="Primeiro nome" required>
+    <input type="text" id="nome2Comparativo" placeholder="Segundo nome" required>
+    Período de: <input type="number" id="periodoInicioComparativo" placeholder="Ano Início" min="1930" max="2020" required>
+    até: <input type="number" id="periodoFimComparativo" placeholder="Ano Fim" min="1930" max="2020" required>
+    <button type="submit">Comparar</button>
+  </form>
+  <div class="chart-container-comparativo">
+    <canvas id="graficoComparativo"></canvas>
+  </div>
 
   <script>
     document.getElementById("form").addEventListener("submit", async function (e) {
       e.preventDefault();
       const nome = document.getElementById("nome").value;
+      const periodoInicio = document.getElementById("periodoInicio").value;
+      const periodoFim = document.getElementById("periodoFim").value;
 
-      const res = await fetch("/nome", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome })
-      });
+      if (parseInt(periodoInicio) > parseInt(periodoFim)) {
+          alert('O ano de início deve ser menor ou igual ao ano de fim.');
+          return;
+      }
 
-      const data = await res.json();
+      try {
+        const res = await fetch("/api/nome", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nome, periodoInicio, periodoFim })
+        });
 
-      const labels = data.res.map(r => r.periodo);
-    //   const valores = data.res.map(r => r.ranking || 0); // não tem ranking direto, você pode calcular baseado na posição do nome
-      const valores = data.res.map(r => r.frequencia);
- 
-
-      new Chart(document.getElementById("grafico"), {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: `Ranking do nome ${data.nome}`,
-            data: valores,
-            borderColor: 'blue',
-            fill: false
-          }]
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `Erro na requisição: ${res.status}`);
         }
-      });
+
+        const data = await res.json();
+        console.log('Dados recebidos:', data);
+
+        if (!data.res || data.res.length === 0) {
+          alert('Nenhum dado encontrado para o nome e período especificados.');
+          if (window.myChart) {
+            window.myChart.destroy();
+          }
+          return;
+        }
+
+        // Processar os dados para o gráfico
+        const labels = data.res.map(item => {
+          // Extrair o ano do período (formato [ano_inicio,ano_fim))
+          const anoInicio = item.periodo.substring(1, item.periodo.indexOf(','));
+          return anoInicio;
+        });
+        
+        const valores = data.res.map(item => item.frequencia);
+
+        console.log('Labels:', labels);
+        console.log('Valores:', valores);
+
+        const ctx = document.getElementById("grafico").getContext("2d");
+        
+        if (window.myChart) {
+          window.myChart.destroy();
+        }
+
+        window.myChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: `Frequência do nome ${nome}`,
+              data: valores,
+              borderColor: 'rgb(75, 192, 192)',
+              tension: 0.1,
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Frequência'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Ano'
+                }
+              }
+            },
+            plugins: {
+              title: {
+                display: true,
+                text: `Evolução da Frequência do nome ${nome} (${periodoInicio}-${periodoFim})`
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Erro no primeiro gráfico:', error); // Log específico
+        alert(error.message || 'Erro ao buscar dados. Por favor, tente novamente.');
+      }
     });
+
+    // Carregar estados ao iniciar
+    async function carregarEstados() {
+      try {
+        const res = await fetch('/api/estados');
+        const estados = await res.json();
+        const selectEstado1 = document.getElementById('estado');
+        const selectEstado2 = document.getElementById('estadoComparativo');
+        
+        estados.forEach(estado => {
+          const option1 = document.createElement('option');
+          option1.value = estado.id;
+          option1.textContent = `${estado.nome} (${estado.sigla})`;
+          selectEstado1.appendChild(option1);
+
+          const option2 = document.createElement('option');
+          option2.value = estado.id;
+          option2.textContent = `${estado.nome} (${estado.sigla})`;
+          selectEstado2.appendChild(option2);
+        });
+      } catch (error) {
+        console.error('Erro ao carregar estados:', error);
+      }
+    }
+
+    // Carregar municípios quando um estado for selecionado
+    async function carregarMunicipios(estadoId, targetSelectId) {
+      try {
+        const res = await fetch(`/api/estados/${estadoId}/municipios`);
+        const municipios = await res.json();
+        const selectMunicipio = document.getElementById(targetSelectId);
+        selectMunicipio.innerHTML = '<option value="">Selecione o Município</option>';
+        
+        municipios.forEach(municipio => {
+          const option = document.createElement('option');
+          option.value = municipio.id;
+          option.textContent = municipio.nome;
+          selectMunicipio.appendChild(option);
+        });
+
+        selectMunicipio.style.display = 'block';
+      } catch (error) {
+        console.error('Erro ao carregar municípios:', error);
+      }
+    }
+
+    // Event listeners para os selects
+    document.getElementById('tipoLocalidade').addEventListener('change', function(e) {
+      const selectMunicipio = document.getElementById('municipio');
+      if (e.target.value === 'municipio') {
+        selectMunicipio.style.display = 'block';
+        const estadoId = document.getElementById('estado').value;
+        if (estadoId) {
+          carregarMunicipios(estadoId, 'municipio');
+        }
+      } else {
+        selectMunicipio.style.display = 'none';
+      }
+    });
+
+    document.getElementById('estado').addEventListener('change', function(e) {
+      if (e.target.value && document.getElementById('tipoLocalidade').value === 'municipio') {
+        carregarMunicipios(e.target.value, 'municipio');
+      }
+    });
+
+    document.getElementById('tipoLocalidadeComparativo').addEventListener('change', function(e) {
+      const selectMunicipio = document.getElementById('municipioComparativo');
+      selectMunicipio.style.display = e.target.value === 'municipio' ? 'block' : 'none';
+    });
+
+    document.getElementById('estadoComparativo').addEventListener('change', function(e) {
+      if (e.target.value && document.getElementById('tipoLocalidadeComparativo').value === 'municipio') {
+        carregarMunicipios(e.target.value, 'municipioComparativo');
+      }
+    });
+
+    document.getElementById("formLocalidade").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const tipoLocalidade = document.getElementById("tipoLocalidade").value;
+      const estado = document.getElementById("estado");
+      const municipio = document.getElementById("municipio");
+      
+      let codigoLocalidade, nomeLocalidade;
+      
+      if (tipoLocalidade === 'UF') {
+        codigoLocalidade = estado.value;
+        nomeLocalidade = estado.options[estado.selectedIndex].text;
+      } else {
+        if (!municipio.value) {
+          alert('Por favor, selecione um município');
+          return;
+        }
+        codigoLocalidade = municipio.value;
+        nomeLocalidade = municipio.options[municipio.selectedIndex].text;
+      }
+
+      try {
+        const res = await fetch("/api/nome/ranking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ codigoLocalidade, nomeLocalidade })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `Erro na requisição: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const tbody = document.querySelector("#tabelaRanking tbody");
+        tbody.innerHTML = '';
+
+        if (!data.res || data.res.length === 0) {
+          const noDataRow = document.createElement('tr');
+          const noDataCell = document.createElement('td');
+          noDataCell.colSpan = 4;
+          noDataCell.textContent = 'Nenhum dado de ranking encontrado para esta localidade';
+          noDataCell.style.textAlign = 'center';
+          noDataRow.appendChild(noDataCell);
+          tbody.appendChild(noDataRow);
+          return;
+        }
+
+        // Agrupar dados por período
+        const dadosPorPeriodo = {};
+        data.res.forEach(item => {
+          if (!dadosPorPeriodo[item.periodo]) {
+            dadosPorPeriodo[item.periodo] = [];
+          }
+          dadosPorPeriodo[item.periodo].push(item);
+        });
+
+        // Ordenar períodos
+        const periodos = Object.keys(dadosPorPeriodo).sort();
+
+        // Criar linhas da tabela
+        periodos.forEach(periodo => {
+          const row = document.createElement('tr');
+          
+          // Ordenar nomes por frequência para o período e pegar os top 3
+          const nomesOrdenados = dadosPorPeriodo[periodo]
+            .sort((a, b) => b.frequencia - a.frequencia)
+            .slice(0, 3);
+
+          // Adicionar células para os 3 primeiros nomes
+          for (let i = 0; i < 3; i++) {
+            const td = document.createElement('td');
+            if (nomesOrdenados[i]) {
+              td.textContent = `${nomesOrdenados[i].nome} (${nomesOrdenados[i].frequencia})`;
+            } else {
+              td.textContent = '-';
+            }
+            row.appendChild(td);
+          }
+
+          tbody.appendChild(row);
+        });
+
+      } catch (error) {
+        console.error('Erro:', error);
+        alert(error.message || 'Erro ao buscar dados. Por favor, tente novamente.');
+      }
+    });
+
+    // Segundo formulário (Comparativo)
+    document.getElementById("formComparativo").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const tipoLocalidade = document.getElementById("tipoLocalidadeComparativo").value;
+      const estado = document.getElementById("estadoComparativo");
+      const municipio = document.getElementById("municipioComparativo");
+      const nome1 = document.getElementById("nome1Comparativo").value;
+      const nome2 = document.getElementById("nome2Comparativo").value;
+      const periodoInicio = document.getElementById("periodoInicioComparativo").value;
+      const periodoFim = document.getElementById("periodoFimComparativo").value;
+      
+      let codigoLocalidade, nomeLocalidade;
+      
+      if (tipoLocalidade === 'UF') {
+        if (!estado.value) {
+          alert('Por favor, selecione um estado');
+          return;
+        }
+        codigoLocalidade = estado.value;
+        nomeLocalidade = estado.options[estado.selectedIndex].text;
+      } else if (tipoLocalidade === 'municipio') {
+        if (!municipio.value) {
+          alert('Por favor, selecione um município');
+          return;
+        }
+        codigoLocalidade = municipio.value;
+        nomeLocalidade = municipio.options[municipio.selectedIndex].text;
+      } else {
+        alert('Por favor, selecione o tipo de localidade');
+        return;
+      }
+
+      if (parseInt(periodoInicio) > parseInt(periodoFim)) {
+        alert('O ano de início deve ser menor ou igual ao ano de fim.');
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/nome/localidade/comparar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            codigoLocalidade,
+            nomeLocalidade,
+            nome1,
+            nome2,
+            periodoInicio,
+            periodoFim
+          })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || `Erro na requisição: ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log('Dados recebidos para comparação:', data);
+
+        if (!data.res1.length && !data.res2.length) {
+          alert(`Nenhum dado encontrado para os nomes ${data.nome1} e ${data.nome2} na localidade ${data.nomeLocalidade} no período especificado.`);
+          if (window.myChartComparativo) {
+            window.myChartComparativo.destroy();
+          }
+          return;
+        }
+
+        // Processar os dados para o gráfico
+        const periodos = new Set([
+          ...data.res1.map(item => item.periodo),
+          ...data.res2.map(item => item.periodo)
+        ]);
+
+        const labels = Array.from(periodos).sort();
+        const valores1 = labels.map(periodo => {
+          const item = data.res1.find(r => r.periodo === periodo);
+          return item ? item.frequencia : 0;
+        });
+        const valores2 = labels.map(periodo => {
+          const item = data.res2.find(r => r.periodo === periodo);
+          return item ? item.frequencia : 0;
+        });
+
+        const ctx = document.getElementById("graficoComparativo").getContext("2d");
+        
+        if (window.myChartComparativo) {
+          window.myChartComparativo.destroy();
+        }
+
+        window.myChartComparativo = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: `${data.nome1} em ${data.nomeLocalidade}`,
+                data: valores1,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+              },
+              {
+                label: `${data.nome2} em ${data.nomeLocalidade}`,
+                data: valores2,
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Frequência'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Período'
+                }
+              }
+            },
+            plugins: {
+              title: {
+                display: true,
+                text: `Comparativo de Frequência: ${data.nome1} vs ${data.nome2} em ${data.nomeLocalidade} (${periodoInicio}-${periodoFim})`
+              }
+            }
+          }
+        });
+
+      } catch (error) {
+        console.error('Erro no gráfico comparativo:', error);
+        alert(error.message || 'Erro ao buscar dados. Por favor, tente novamente.');
+      }
+    });
+
+    // Carregar estados ao iniciar a página
+    carregarEstados();
   </script>
 </body>
 </html>
