@@ -39,6 +39,9 @@
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
     }
     input, select, button {
       padding: 8px 12px;
@@ -59,6 +62,14 @@
     h1 {
       color: #333;
       margin-bottom: 20px;
+    }
+    .periodo-group {
+      display: flex;
+      align-items: center;
+      margin: 5px;
+    }
+    .periodo-group label {
+      margin-right: 5px;
     }
   </style>
 </head>
@@ -118,8 +129,12 @@
     </select>
     <input type="text" id="nome1Comparativo" placeholder="Primeiro nome" required>
     <input type="text" id="nome2Comparativo" placeholder="Segundo nome" required>
-    Período de: <input type="number" id="periodoInicioComparativo" placeholder="Ano Início" min="1930" max="2020" required>
-    até: <input type="number" id="periodoFimComparativo" placeholder="Ano Fim" min="1930" max="2020" required>
+    
+    <div class="periodo-group">
+      Período de: <input type="number" id="periodoInicioComparativo" placeholder="Ano Início" min="1930" max="2020" required>
+      até: <input type="number" id="periodoFimComparativo" placeholder="Ano Fim" min="1930" max="2020" required>
+    </div>
+
     <button type="submit">Comparar</button>
   </form>
   <div class="chart-container-comparativo">
